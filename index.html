@@ -9,6 +9,10 @@
   <title>Aviator Clone — Play‑Money (Upgraded)</title>
   <meta name="description" content="Play‑money Aviator clone — multiplayer (Firebase), provably‑fair demo, leaderboards, PWA-ready" />
   <style>
+    body { -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+.mult { transition: color .15s ease, transform .12s ease; }
+.trail-dot { transition: opacity .6s ease, transform .6s ease; }
+
     :root{--bg1:#05031a;--accent:#ff6b6b;--accent2:#7efcff}
     *{box-sizing:border-box}
     html,body{height:100%;margin:0;font-family:Inter, system-ui, Arial, sans-serif;background:linear-gradient(180deg,var(--bg1),#06010a);color:#fff}
@@ -48,6 +52,31 @@
     .hint{font-size:12px;opacity:0.8;margin-top:14px}
   </style>
 </head>
+  <script>
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // show a small button or hint to user
+  const b = document.createElement('button');
+  b.textContent = 'Install App';
+  b.style.position = 'fixed'; b.style.bottom='18px'; b.style.right='18px'; b.style.zIndex=9999;
+  b.onclick = async () => {
+    b.remove();
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log('Install outcome', outcome);
+    deferredPrompt = null;
+  };
+  document.body.appendChild(b);
+});
+    <button id="muteBtn">Mute</button>
+<script>
+let muted=false;
+document.getElementById('muteBtn').onclick = ()=>{ muted=!muted; audioCtx.suspend(); if(!muted) audioCtx.resume(); }
+
+</script>
+
 <body>
   <div class="wrap">
     <h1>Aviator Clone — Play‑Money (Upgraded)</h1>
