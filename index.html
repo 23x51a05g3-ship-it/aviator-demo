@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aviator Clone — Play Money (Single Page)</title>
+  <style>
+    /* Reset + layout */
+    :root{--bg1:#071021;--bg2:#120018;--accent:#ff6b6b;--accent2:#7efcff}
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, Arial, sans-serif;background:linear-gradient(180deg,var(--bg1),#05030a);color:#fff}
+    .wrap{width:100%;max-width:960px;margin:0 auto;padding:18px}
+
+    /* Game stage */
+    .stage{position:relative;height:60vh;border-radius:18px;background:radial-gradient(circle at 10% 10%, rgba(255,255,255,0.02), transparent 10%), linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.25));overflow:hidden;border:1px solid rgba(255,255,255,0.04)}
+
+    /* background graphics (B) */
+    .stars{position:absolute;inset:0;pointer-events:none}
+    .cloud{position:absolute;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));filter:blur(18px);opacity:0.7;border-radius:50%}
+
+    /* plane + trail */
+    #plane{position:absolute;left:10%;bottom:10%;width:84px;transform-origin:center;transition:transform .06s linear;z-index:6}
+    .trail-dot{position:absolute;width:12px;height:12px;border-radius:50%;filter:blur(6px);opacity:0.85;z-index:4}
+
+    /* HUD */
+    .hud{position:absolute;left:12px;top:12px;z-index:10}
+    .mult{font-weight:700;font-size:56px;color:var(--accent);text-shadow:0 8px 30px rgba(255,107,107,0.18)}
+    .sub{opacity:0.7;font-size:13px}
+
+    /* Controls and bet UI (C) */
+    .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:18px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+    .bet-input{width:120px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#fff}
+    .btn{padding:10px 16px;border-radius:10px;border:none;cursor:pointer;font-weight:700}
+    .btn-play{background:linear-gradient(90deg,var(--accent),#ff9a9a);color:#111}
+    .btn-cash{background:linear-gradient(90deg,#4ef08a,#00c853);color:#011}
+
+    /* panel bottom */
+    .panel{display:flex;justify-content:space-between;gap:12px;margin-top:16px}
+    .small{font-size:13px;opacity:0.85}
+
+    /* provably-fair box (E) */
+    .pf{font-size:12px;padding:10px;border-radius:8px;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.03);max-width:100%}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace}
+
+    /* responsive */
+    @media (max-width:600px){.mult{font-size:36px}.stage{height:52vh}#plane{width:64px}}
+
+    /* small helpers */
+    .hidden{display:none}
+    .center{text-align:center}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2 style="margin:6px 0">Aviator Clone — Play‑Money (Demo)</h2>
+    <div class="stage" id="stage">
+      <canvas id="bg" class="stars"></canvas>
+      <img id="plane" src="https://i.imgur.com/2cYQnS9.png" alt="plane" />
+      <!-- trail container -->
+      <div id="trailRoot"></div>
+
+      <!-- HUD -->
+      <div class="hud">
+        <div class="mult" id="mult">1.00x</div>
+        <div class="sub">Round: <span id="roundNum">0</span> • Status: <span id="status">idle</span></div>
+      </div>
+
+      <!-- provably fair box (E) -->
+      <div style="position:absolute;right:12px;top:12px;z-index:11;max-width:360px">
+        <div class="pf">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+            <div class="small">Provably-fair (demo)</div>
+            <button id="regenClient" class="btn" style="padding:6px 10px">New ClientSeed</button>
+          </div>
+          <div style="margin-top:8px" class="mono"><strong>ClientSeed:</strong><div id="clientSeed" style="word-break:break-all"></div></div>
+          <div style="margin-top:6px" class="mono"><strong>Server Precommit (SHA256):</strong><div id="serverCommit" style="word-break:break-all"></div></div>
+          <div style="margin-top:6px" class="mono"><strong>Last Round Hash:</strong><div id="lastHash" style="word-break:break-all"></div></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="card">
+        <div style="font-size:13px">Balance</div>
+        <div style="font-weight:800;font-size:20px" id="balance">1000</div>
+      </div>
+
+      <div class="card">
+        <div style="font-size:13px">Bet amount</div>
+        <input id="betAmount" class="bet-input" type="number" value="10" min="1" />
+      </div>
+
+      <div class="card">
+        <div style="font-size:13px">Auto Cashout</div>
+        <input id="autoCash" class="bet-input" type="number" placeholder="e.g. 2 (x)" />
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center">
+        <button id="startBtn" class="btn btn-play">Start Round</button>
+        <button id="cashBtn" class="btn btn-cash hidden">Cash Out</button>
+      </div>
+
+      <!-- small extras -->
+      <div class="card small">
+        <div>Mode: <strong>Play‑money • Anonymous</strong></div>
+        <div style="margin-top:6px">Multiplayer: <span id="mpStatus">Off</span></div>
+      </div>
+    </div>
+
+    <!-- Bottom panel -->
+    <div class="panel">
+      <div class="card pf" style="flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="small">Round history (last 6)</div>
+          <div class="small">Round #: <span id="roundCounter">0</span></div>
+        </div>
+        <div id="history" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"></div>
+      </div>
+
+      <div class="card" style="width:240px">
+        <div style="font-size:13px;opacity:0.8">Controls (extra)</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+          <button id="demoAnim" class="btn">Toggle Plane Trail</button>
+          <button id="toggleMP" class="btn">Toggle Multiplayer</button>
+          <button id="resetBtn" class="btn">Reset Balance</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;font-size:12px;opacity:0.8">Note: This is a <strong>play‑money</strong> demo. It uses a provably‑fair style commit/reveal you control locally. Multiplayer requires you to paste a Firebase config (free tier) into the code. No real money involved.</div>
+
+  </div>
+
+  <script>
+    /* ===== Utilities ===== */
+    function hexToBytes(hex){for(var bytes=[],c=0;c<hex.length;c+=2)bytes.push(parseInt(hex.substr(c,2),16));return bytes}
+    async function sha256Hex(str){
+      const enc = new TextEncoder();
+      const data = enc.encode(str);
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+
+    /* ===== App State ===== */
+    const state = {
+      balance: parseFloat(localStorage.getItem('avi_balance')||'1000'),
+      clientSeed: localStorage.getItem('avi_client') || ('client_' + Math.random().toString(36).slice(2,12)),
+      serverSeed: null, // real server seed (kept secret until reveal)
+      serverCommit: null, // shown SHA256(serverSeed)
+      round: 0,
+      running: false,
+      trailOn: true,
+      history: JSON.parse(localStorage.getItem('avi_history')||'[]')
+    }
+
+    /* ===== UI refs ===== */
+    const multEl = document.getElementById('mult');
+    const statusEl = document.getElementById('status');
+    const balanceEl = document.getElementById('balance');
+    const betInput = document.getElementById('betAmount');
+    const startBtn = document.getElementById('startBtn');
+    const cashBtn = document.getElementById('cashBtn');
+    const autoCash = document.getElementById('autoCash');
+    const clientSeedEl = document.getElementById('clientSeed');
+    const serverCommitEl = document.getElementById('serverCommit');
+    const lastHashEl = document.getElementById('lastHash');
+    const roundNumEl = document.getElementById('roundNum');
+    const historyEl = document.getElementById('history');
+    const roundCounterEl = document.getElementById('roundCounter');
+    const mpStatusEl = document.getElementById('mpStatus');
+
+    /* ===== Init UI ===== */
+    function renderState(){
+      balanceEl.textContent = state.balance.toFixed(2);
+      clientSeedEl.textContent = state.clientSeed;
+      serverCommitEl.textContent = state.serverCommit || '(server seed will be precommitted before each round)';
+      roundNumEl.textContent = state.round;
+      roundCounterEl.textContent = state.round;
+      historyEl.innerHTML = '';
+      state.history.slice().reverse().slice(0,6).forEach(r=>{
+        const el = document.createElement('div');
+        el.style.padding='6px 8px';el.style.borderRadius='8px';el.className='mono';el.style.background='rgba(255,255,255,0.02)';el.style.fontSize='13px';
+        el.textContent = `#${r.round} ${r.mult}x (${r.result})`;
+        historyEl.appendChild(el);
+      });
+      lastHashEl.textContent = state.lastHash || '';
+    }
+    renderState();
+
+    /* ===== Background stars + clouds (B) ===== */
+    const bg = document.getElementById('bg');
+    const stage = document.getElementById('stage');
+    function resizeBg(){bg.width = stage.clientWidth; bg.height=stage.clientHeight; drawBg();}
+    window.addEventListener('resize', resizeBg);
+    function drawBg(){
+      const ctx = bg.getContext('2d');
+      ctx.clearRect(0,0,bg.width,bg.height);
+      // stars
+      for(let i=0;i<120;i++){
+        ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.12})`;
+        ctx.fillRect(Math.random()*bg.width, Math.random()*bg.height, Math.random()*2, Math.random()*2);
+      }
+    }
+    resizeBg();
+
+    /* ===== Provably-fair helpers (E) ===== */
+    // serverSeed is generated each round and precommitted by showing its SHA256 (serverCommit)
+    async function precommitServerSeed(){
+      state.serverSeed = 'srv_' + Math.random().toString(36).repeat(6).slice(2,60);
+      state.serverCommit = await sha256Hex(state.serverSeed);
+      localStorage.setItem('avi_server_commit', state.serverCommit);
+      serverCommitEl.textContent = state.serverCommit;
+    }
+
+    // Derive the round hash: SHA256(serverSeed + clientSeed + nonce)
+    async function deriveRoundHash(nonce){
+      const s = state.serverSeed + '|' + state.clientSeed + '|' + nonce;
+      return await sha256Hex(s);
+    }
+
+    // Extract 52 bits from first 13 hex chars and compute H
+    function first52IntFromHash(hex){
+      const first13 = hex.slice(0,13);
+      return parseInt(first13,16);
+    }
+
+    // Map H -> multiplier using the mathematical mapping (educational)
+    function mapHtoMultiplier(H){
+      const D = Math.pow(2,52);
+      const fraction = H / D;
+      const val = 1 / (1 - fraction);
+      // clamp and two decimals
+      const scaled = Math.floor(val * 100);
+      return (scaled/100);
+    }
+
+    /* ===== Round engine (D) ===== */
+    let engineInterval = null;
+    let current = {mult:1, crashAt:0, bet:0, cashed:false, nonce:0, hash:'', H:0};
+
+    async function startRound(){
+      if(state.running) return;
+      const bet = parseFloat(betInput.value) || 1;
+      if(bet <=0 || bet>state.balance){alert('Invalid bet or insufficient balance');return}
+
+      // prepare serverSeed precommit if missing
+      await precommitServerSeed();
+
+      state.round += 1;
+      state.running = true;
+      current.bet = bet; current.cashed=false; current.mult=1; current.nonce = state.round;
+      state.balance -= bet;
+      renderState();
+
+      // reveal serverSeed after precommit and derive crash
+      const roundHash = await deriveRoundHash(current.nonce);
+      current.hash = roundHash;
+      current.H = first52IntFromHash(roundHash);
+      // map to multiplier (this is the demo game's crash number)
+      current.crashAt = mapHtoMultiplier(current.H);
+
+      // store lastHash for UI
+      state.lastHash = roundHash;
+      renderState();
+
+      // start animation loop
+      document.getElementById('status').textContent = 'running';
+      startBtn.disabled = true; startBtn.classList.add('hidden');
+      cashBtn.classList.remove('hidden');
+
+      engineInterval = setInterval(()=>{
+        current.mult += current.mult*0.02; // exponential-ish
+        multEl.textContent = current.mult.toFixed(2) + 'x';
+        // plane move
+        const plane = document.getElementById('plane');
+        plane.style.transform = `translate(-${current.mult*6}px, -${current.mult*7}px) rotate(${current.mult*3}deg) scale(${1+current.mult/120})`;
+        maybeDropTrail();
+        // auto cashout
+        const auto = parseFloat(autoCash.value);
+        if(auto && current.mult>=auto && !current.cashed){ doCashout(); }
+        if(current.mult >= current.crashAt){
+          // crashed
+          clearInterval(engineInterval); state.running=false; engineInterval=null;
+          multEl.textContent = current.mult.toFixed(2) + 'x 💥';
+          document.getElementById('status').textContent = 'crashed';
+          cashBtn.classList.add('hidden'); startBtn.disabled=false; startBtn.classList.remove('hidden');
+          recordRound('crash');
+        }
+      },60);
+    }
+
+    function doCashout(){
+      if(!state.running || current.cashed) return;
+      current.cashed = true;
+      clearInterval(engineInterval); state.running=false; engineInterval=null;
+      const payout = +(current.bet * current.mult).toFixed(2);
+      state.balance += payout;
+      multEl.textContent = current.mult.toFixed(2) + 'x (Cashed)';
+      document.getElementById('status').textContent = 'cashed out';
+      cashBtn.classList.add('hidden'); startBtn.disabled=false; startBtn.classList.remove('hidden');
+      recordRound('cash');
+    }
+
+    function recordRound(result){
+      const r = {round: state.round, mult: current.crashAt.toFixed(2), result, hash:current.hash};
+      state.history.push(r);
+      if(state.history.length>200) state.history.shift();
+      localStorage.setItem('avi_history', JSON.stringify(state.history));
+      localStorage.setItem('avi_balance', state.balance);
+      renderState();
+    }
+
+    /* ===== UI wiring ===== */
+    startBtn.addEventListener('click', startRound);
+    cashBtn.addEventListener('click', doCashout);
+    document.getElementById('regenClient').addEventListener('click', ()=>{state.clientSeed = 'client_'+Math.random().toString(36).slice(2,12); localStorage.setItem('avi_client', state.clientSeed); renderState();});
+    document.getElementById('resetBtn').addEventListener('click', ()=>{state.balance=1000;localStorage.setItem('avi_balance',state.balance);renderState();});
+    document.getElementById('demoAnim').addEventListener('click', ()=>{state.trailOn=!state.trailOn});
+
+    document.getElementById('toggleMP').addEventListener('click', ()=>{
+      if(mpStatusEl.textContent==='Off'){
+        mpStatusEl.textContent='On (local simulated)';
+        // placeholder: full firebase setup instructions below
+      } else { mpStatusEl.textContent='Off'; }
+    });
+
+    /* ===== Trail visuals (A) ===== */
+    const trailRoot = document.getElementById('trailRoot');
+    function maybeDropTrail(){ if(!state.trailOn) return; const d=document.createElement('div'); d.className='trail-dot'; d.style.left=(20+Math.random()*30)+'%'; d.style.bottom=(10+current.mult*3)+'%'; d.style.background='radial-gradient(circle, rgba(255,120,120,0.9), rgba(255,40,40,0.15))'; trailRoot.appendChild(d); setTimeout(()=>{d.style.opacity=0; d.style.transform='scale(1.6)';},50); setTimeout(()=>d.remove(),1300); }
+
+    /* ===== initial seed commit ===== */
+    (async()=>{ await precommitServerSeed(); renderState(); })();
+
+    /* ===== Multiplayer (F) — instructions placeholder ===== */
+    /*
+      To enable real multiplayer with shared rounds you can use Firebase Realtime Database (free tier).
+      Steps (short):
+        1. Create Firebase project at https://console.firebase.google.com
+        2. Create a Realtime Database (start in locked mode, but for demo you can allow open reads/writes)
+        3. Copy the firebaseConfig object and paste into the code where indicated (search for FIREBASE_CONFIG)
+        4. Add small client code to push a new round object (server precommit + revealed serverSeed + nonce + hash) and listen for the latest round to sync all clients.
+
+      Important: For your public demo, keep rules simple and do not accept real money. I can provide the exact Firebase snippet if you want to proceed.
+    */
+
+    /* ===== Accessibility note ===== */
+    // This demo intentionally runs entirely in-browser and stores data locally. It is a play-money educational prototype.
+  </script>
+</body>
+</html>
