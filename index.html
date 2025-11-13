@@ -3,31 +3,25 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Aviator Clone — Play Money (Single Page)</title>
+  <title>Aviator Clone — Play‑Money (Upgraded)</title>
+  <meta name="description" content="Play‑money Aviator clone — multiplayer (Firebase), provably‑fair demo, leaderboards, PWA-ready" />
   <style>
-    /* Reset + layout */
-    :root{--bg1:#071021;--bg2:#120018;--accent:#ff6b6b;--accent2:#7efcff}
+    :root{--bg1:#05031a;--accent:#ff6b6b;--accent2:#7efcff}
     *{box-sizing:border-box}
-    html,body{height:100%;margin:0;font-family:Inter, system-ui, Arial, sans-serif;background:linear-gradient(180deg,var(--bg1),#05030a);color:#fff}
-    .wrap{width:100%;max-width:960px;margin:0 auto;padding:18px}
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, Arial, sans-serif;background:linear-gradient(180deg,var(--bg1),#06010a);color:#fff}
+    .wrap{width:100%;max-width:1000px;margin:0 auto;padding:18px}
+    h1{margin:6px 0 12px}
 
-    /* Game stage */
-    .stage{position:relative;height:60vh;border-radius:18px;background:radial-gradient(circle at 10% 10%, rgba(255,255,255,0.02), transparent 10%), linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.25));overflow:hidden;border:1px solid rgba(255,255,255,0.04)}
+    /* stage */
+    .stage{position:relative;height:60vh;border-radius:18px;background:radial-gradient(circle at 20% 20%, rgba(255,255,255,0.02), transparent 12%), linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.25));overflow:hidden;border:1px solid rgba(255,255,255,0.04)}
+    canvas.bg{position:absolute;inset:0;z-index:1}
+    #plane{position:absolute;left:10%;bottom:10%;width:96px;transform-origin:center;z-index:6;will-change:transform,opacity}
+    .trail-dot{position:absolute;width:12px;height:12px;border-radius:50%;filter:blur(6px);opacity:0.9;z-index:4}
 
-    /* background graphics (B) */
-    .stars{position:absolute;inset:0;pointer-events:none}
-    .cloud{position:absolute;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));filter:blur(18px);opacity:0.7;border-radius:50%}
+    .hud{position:absolute;left:16px;top:14px;z-index:10}
+    .mult{font-weight:800;font-size:56px;color:var(--accent);text-shadow:0 8px 30px rgba(255,107,107,0.18)}
+    .sub{opacity:0.75;font-size:13px}
 
-    /* plane + trail */
-    #plane{position:absolute;left:10%;bottom:10%;width:84px;transform-origin:center;transition:transform .06s linear;z-index:6}
-    .trail-dot{position:absolute;width:12px;height:12px;border-radius:50%;filter:blur(6px);opacity:0.85;z-index:4}
-
-    /* HUD */
-    .hud{position:absolute;left:12px;top:12px;z-index:10}
-    .mult{font-weight:700;font-size:56px;color:var(--accent);text-shadow:0 8px 30px rgba(255,107,107,0.18)}
-    .sub{opacity:0.7;font-size:13px}
-
-    /* Controls and bet UI (C) */
     .controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:18px}
     .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
     .bet-input{width:120px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#fff}
@@ -35,42 +29,40 @@
     .btn-play{background:linear-gradient(90deg,var(--accent),#ff9a9a);color:#111}
     .btn-cash{background:linear-gradient(90deg,#4ef08a,#00c853);color:#011}
 
-    /* panel bottom */
     .panel{display:flex;justify-content:space-between;gap:12px;margin-top:16px}
-    .small{font-size:13px;opacity:0.85}
-
-    /* provably-fair box (E) */
     .pf{font-size:12px;padding:10px;border-radius:8px;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.03);max-width:100%}
     .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace}
 
-    /* responsive */
     @media (max-width:600px){.mult{font-size:36px}.stage{height:52vh}#plane{width:64px}}
-
-    /* small helpers */
     .hidden{display:none}
     .center{text-align:center}
+
+    /* leaderboard */
+    .leader{display:flex;flex-direction:column;gap:6px}
+    .leader-row{display:flex;justify-content:space-between;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.02)}
+
+    /* small hint */
+    .hint{font-size:12px;opacity:0.8;margin-top:14px}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h2 style="margin:6px 0">Aviator Clone — Play‑Money (Demo)</h2>
+    <h1>Aviator Clone — Play‑Money (Upgraded)</h1>
     <div class="stage" id="stage">
-      <canvas id="bg" class="stars"></canvas>
+      <canvas id="bg" class="bg"></canvas>
       <img id="plane" src="https://i.imgur.com/2cYQnS9.png" alt="plane" />
-      <!-- trail container -->
       <div id="trailRoot"></div>
 
-      <!-- HUD -->
       <div class="hud">
         <div class="mult" id="mult">1.00x</div>
         <div class="sub">Round: <span id="roundNum">0</span> • Status: <span id="status">idle</span></div>
       </div>
 
-      <!-- provably fair box (E) -->
+      <!-- provably fair + config -->
       <div style="position:absolute;right:12px;top:12px;z-index:11;max-width:360px">
         <div class="pf">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-            <div class="small">Provably-fair (demo)</div>
+            <div class="small">Provably‑fair (demo)</div>
             <button id="regenClient" class="btn" style="padding:6px 10px">New ClientSeed</button>
           </div>
           <div style="margin-top:8px" class="mono"><strong>ClientSeed:</strong><div id="clientSeed" style="word-break:break-all"></div></div>
@@ -78,7 +70,6 @@
           <div style="margin-top:6px" class="mono"><strong>Last Round Hash:</strong><div id="lastHash" style="word-break:break-all"></div></div>
         </div>
       </div>
-
     </div>
 
     <!-- Controls -->
@@ -94,8 +85,8 @@
       </div>
 
       <div class="card">
-        <div style="font-size:13px">Auto Cashout</div>
-        <input id="autoCash" class="bet-input" type="number" placeholder="e.g. 2 (x)" />
+        <div style="font-size:13px">Auto Cashout (x)</div>
+        <input id="autoCash" class="bet-input" type="number" placeholder="e.g. 2" />
       </div>
 
       <div style="display:flex;gap:8px;align-items:center">
@@ -103,14 +94,12 @@
         <button id="cashBtn" class="btn btn-cash hidden">Cash Out</button>
       </div>
 
-      <!-- small extras -->
       <div class="card small">
         <div>Mode: <strong>Play‑money • Anonymous</strong></div>
         <div style="margin-top:6px">Multiplayer: <span id="mpStatus">Off</span></div>
       </div>
     </div>
 
-    <!-- Bottom panel -->
     <div class="panel">
       <div class="card pf" style="flex:1">
         <div style="display:flex;justify-content:space-between;align-items:center">
@@ -120,21 +109,45 @@
         <div id="history" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"></div>
       </div>
 
-      <div class="card" style="width:240px">
-        <div style="font-size:13px;opacity:0.8">Controls (extra)</div>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
-          <button id="demoAnim" class="btn">Toggle Plane Trail</button>
-          <button id="toggleMP" class="btn">Toggle Multiplayer</button>
-          <button id="resetBtn" class="btn">Reset Balance</button>
-        </div>
+      <div class="card" style="width:260px">
+        <div style="font-size:13px;opacity:0.9">Leaderboard (Top wins)</div>
+        <div id="leader" class="leader" style="margin-top:8px"></div>
       </div>
     </div>
 
-    <div style="margin-top:12px;font-size:12px;opacity:0.8">Note: This is a <strong>play‑money</strong> demo. It uses a provably‑fair style commit/reveal you control locally. Multiplayer requires you to paste a Firebase config (free tier) into the code. No real money involved.</div>
+    <div class="hint">Note: Play‑money demo. Multiplayer and leaderboard require a free Firebase project—see instructions below. This app is PWA-ready (manifest + sw files included in the repo instructions).</div>
+
+    <!-- Hidden area for Firebase config insertion -->
+    <div id="firebasePlaceholder" style="display:none">
+      <!-- Paste your Firebase config object here if you want multiplayer/leaderboard enabled. Example:
+      const FIREBASE_CONFIG = {
+        apiKey: "...",
+        authDomain: "...",
+        databaseURL: "...",
+        projectId: "...",
+        storageBucket: "...",
+        messagingSenderId: "...",
+        appId: "..."
+      }
+      -->
+    </div>
 
   </div>
 
   <script>
+    /*************************************************************************
+     * Aviator Clone — Upgraded Single Page
+     * Features added:
+     *  - A) Improved plane animation + particle trail (no external assets)
+     *  - B) Background stars
+     *  - C) Bet UI and auto-cash
+     *  - D) Round engine (provably-fair demo)
+     *  - E) Provably-fair commit/reveal (local demo)
+     *  - F) Multiplayer + leaderboard hooks (Firebase, optional)
+     *
+     * IMPORTANT: This is a PLAY‑MONEY demo. Do NOT accept real money.
+     *************************************************************************/
+
     /* ===== Utilities ===== */
     function hexToBytes(hex){for(var bytes=[],c=0;c<hex.length;c+=2)bytes.push(parseInt(hex.substr(c,2),16));return bytes}
     async function sha256Hex(str){
@@ -144,17 +157,19 @@
       return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
     }
 
-    /* ===== App State ===== */
+    /* ===== App state ===== */
     const state = {
       balance: parseFloat(localStorage.getItem('avi_balance')||'1000'),
       clientSeed: localStorage.getItem('avi_client') || ('client_' + Math.random().toString(36).slice(2,12)),
-      serverSeed: null, // real server seed (kept secret until reveal)
-      serverCommit: null, // shown SHA256(serverSeed)
+      serverSeed: null,
+      serverCommit: localStorage.getItem('avi_server_commit') || null,
       round: 0,
       running: false,
       trailOn: true,
-      history: JSON.parse(localStorage.getItem('avi_history')||'[]')
-    }
+      history: JSON.parse(localStorage.getItem('avi_history')||'[]'),
+      leaderboardEnabled: false,
+      firebaseApp: null
+    };
 
     /* ===== UI refs ===== */
     const multEl = document.getElementById('mult');
@@ -171,183 +186,185 @@
     const historyEl = document.getElementById('history');
     const roundCounterEl = document.getElementById('roundCounter');
     const mpStatusEl = document.getElementById('mpStatus');
+    const leaderEl = document.getElementById('leader');
 
-    /* ===== Init UI ===== */
     function renderState(){
       balanceEl.textContent = state.balance.toFixed(2);
       clientSeedEl.textContent = state.clientSeed;
-      serverCommitEl.textContent = state.serverCommit || '(server seed will be precommitted before each round)';
+      serverCommitEl.textContent = state.serverCommit || '(server commit will be created each round)';
       roundNumEl.textContent = state.round;
       roundCounterEl.textContent = state.round;
-      historyEl.innerHTML = '';
+      historyEl.innerHTML='';
       state.history.slice().reverse().slice(0,6).forEach(r=>{
-        const el = document.createElement('div');
-        el.style.padding='6px 8px';el.style.borderRadius='8px';el.className='mono';el.style.background='rgba(255,255,255,0.02)';el.style.fontSize='13px';
-        el.textContent = `#${r.round} ${r.mult}x (${r.result})`;
+        const el=document.createElement('div'); el.style.padding='6px 8px'; el.style.borderRadius='8px'; el.className='mono'; el.style.background='rgba(255,255,255,0.02)'; el.style.fontSize='13px'; el.textContent=`#${r.round} ${r.mult}x (${r.result})`;
         historyEl.appendChild(el);
       });
       lastHashEl.textContent = state.lastHash || '';
+      renderLeaderboard();
     }
+
+    function renderLeaderboard(){
+      leaderEl.innerHTML='';
+      const top = JSON.parse(localStorage.getItem('avi_leader')||'[]').slice(0,8);
+      top.forEach(item=>{
+        const row=document.createElement('div'); row.className='leader-row';
+        row.innerHTML = `<div style="font-weight:700">${item.name}</div><div>${item.win}</div>`;
+        leaderEl.appendChild(row);
+      });
+    }
+
     renderState();
 
-    /* ===== Background stars + clouds (B) ===== */
-    const bg = document.getElementById('bg');
-    const stage = document.getElementById('stage');
-    function resizeBg(){bg.width = stage.clientWidth; bg.height=stage.clientHeight; drawBg();}
+    /* ===== Background stars ===== */
+    const bg = document.getElementById('bg'); const stage = document.getElementById('stage');
+    function resizeBg(){bg.width = stage.clientWidth; bg.height = stage.clientHeight; drawBg();}
     window.addEventListener('resize', resizeBg);
-    function drawBg(){
-      const ctx = bg.getContext('2d');
-      ctx.clearRect(0,0,bg.width,bg.height);
-      // stars
-      for(let i=0;i<120;i++){
-        ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.12})`;
-        ctx.fillRect(Math.random()*bg.width, Math.random()*bg.height, Math.random()*2, Math.random()*2);
-      }
-    }
+    function drawBg(){const ctx=bg.getContext('2d');ctx.clearRect(0,0,bg.width,bg.height);for(let i=0;i<140;i++){ctx.fillStyle=`rgba(255,255,255,${Math.random()*0.12})`;ctx.fillRect(Math.random()*bg.width, Math.random()*bg.height, Math.random()*2, Math.random()*2);} }
     resizeBg();
 
-    /* ===== Provably-fair helpers (E) ===== */
-    // serverSeed is generated each round and precommitted by showing its SHA256 (serverCommit)
-    async function precommitServerSeed(){
-      state.serverSeed = 'srv_' + Math.random().toString(36).repeat(6).slice(2,60);
-      state.serverCommit = await sha256Hex(state.serverSeed);
-      localStorage.setItem('avi_server_commit', state.serverCommit);
-      serverCommitEl.textContent = state.serverCommit;
-    }
+    /* ===== Provably fair helpers (demo) ===== */
+    async function precommitServerSeed(){ state.serverSeed = 'srv_' + Math.random().toString(36).repeat(6).slice(2,60); state.serverCommit = await sha256Hex(state.serverSeed); localStorage.setItem('avi_server_commit', state.serverCommit); serverCommitEl.textContent = state.serverCommit; }
+    async function deriveRoundHash(nonce){ const s = state.serverSeed + '|' + state.clientSeed + '|' + nonce; return await sha256Hex(s); }
+    function first52IntFromHash(hex){ const first13 = hex.slice(0,13); return parseInt(first13,16); }
+    function mapHtoMultiplier(H){ const D = Math.pow(2,52); const fraction = H / D; const val = 1 / (1 - fraction); const scaled = Math.floor(val * 100); return (scaled/100); }
 
-    // Derive the round hash: SHA256(serverSeed + clientSeed + nonce)
-    async function deriveRoundHash(nonce){
-      const s = state.serverSeed + '|' + state.clientSeed + '|' + nonce;
-      return await sha256Hex(s);
-    }
-
-    // Extract 52 bits from first 13 hex chars and compute H
-    function first52IntFromHash(hex){
-      const first13 = hex.slice(0,13);
-      return parseInt(first13,16);
-    }
-
-    // Map H -> multiplier using the mathematical mapping (educational)
-    function mapHtoMultiplier(H){
-      const D = Math.pow(2,52);
-      const fraction = H / D;
-      const val = 1 / (1 - fraction);
-      // clamp and two decimals
-      const scaled = Math.floor(val * 100);
-      return (scaled/100);
-    }
-
-    /* ===== Round engine (D) ===== */
+    /* ===== Engine ===== */
     let engineInterval = null;
     let current = {mult:1, crashAt:0, bet:0, cashed:false, nonce:0, hash:'', H:0};
 
     async function startRound(){
-      if(state.running) return;
-      const bet = parseFloat(betInput.value) || 1;
-      if(bet <=0 || bet>state.balance){alert('Invalid bet or insufficient balance');return}
+      if(state.running) return; const bet = parseFloat(betInput.value) || 1; if(bet<=0 || bet>state.balance){alert('Invalid bet or insufficient balance'); return}
+      await precommitServerSeed(); state.round += 1; state.running = true; current.bet = bet; current.cashed=false; current.mult=1; current.nonce = state.round; state.balance -= bet; renderState();
 
-      // prepare serverSeed precommit if missing
-      await precommitServerSeed();
+      // derive hash and map
+      const roundHash = await deriveRoundHash(current.nonce); current.hash = roundHash; current.H = first52IntFromHash(roundHash); current.crashAt = mapHtoMultiplier(current.H); state.lastHash = roundHash; renderState();
 
-      state.round += 1;
-      state.running = true;
-      current.bet = bet; current.cashed=false; current.mult=1; current.nonce = state.round;
-      state.balance -= bet;
-      renderState();
+      // sounds
+      playSound('start');
 
-      // reveal serverSeed after precommit and derive crash
-      const roundHash = await deriveRoundHash(current.nonce);
-      current.hash = roundHash;
-      current.H = first52IntFromHash(roundHash);
-      // map to multiplier (this is the demo game's crash number)
-      current.crashAt = mapHtoMultiplier(current.H);
-
-      // store lastHash for UI
-      state.lastHash = roundHash;
-      renderState();
-
-      // start animation loop
-      document.getElementById('status').textContent = 'running';
-      startBtn.disabled = true; startBtn.classList.add('hidden');
-      cashBtn.classList.remove('hidden');
+      document.getElementById('status').textContent = 'running'; startBtn.disabled=true; startBtn.classList.add('hidden'); cashBtn.classList.remove('hidden');
 
       engineInterval = setInterval(()=>{
-        current.mult += current.mult*0.02; // exponential-ish
+        current.mult += current.mult*0.018; // smoother growth
         multEl.textContent = current.mult.toFixed(2) + 'x';
-        // plane move
-        const plane = document.getElementById('plane');
-        plane.style.transform = `translate(-${current.mult*6}px, -${current.mult*7}px) rotate(${current.mult*3}deg) scale(${1+current.mult/120})`;
+        animatePlane(current.mult);
         maybeDropTrail();
-        // auto cashout
         const auto = parseFloat(autoCash.value);
         if(auto && current.mult>=auto && !current.cashed){ doCashout(); }
-        if(current.mult >= current.crashAt){
-          // crashed
-          clearInterval(engineInterval); state.running=false; engineInterval=null;
-          multEl.textContent = current.mult.toFixed(2) + 'x 💥';
-          document.getElementById('status').textContent = 'crashed';
-          cashBtn.classList.add('hidden'); startBtn.disabled=false; startBtn.classList.remove('hidden');
-          recordRound('crash');
-        }
+        if(current.mult >= current.crashAt){ clearInterval(engineInterval); state.running=false; engineInterval=null; multEl.textContent = current.mult.toFixed(2) + 'x 💥'; document.getElementById('status').textContent='crashed'; cashBtn.classList.add('hidden'); startBtn.disabled=false; startBtn.classList.remove('hidden'); playSound('crash'); recordRound('crash'); }
       },60);
     }
 
-    function doCashout(){
-      if(!state.running || current.cashed) return;
-      current.cashed = true;
-      clearInterval(engineInterval); state.running=false; engineInterval=null;
-      const payout = +(current.bet * current.mult).toFixed(2);
-      state.balance += payout;
-      multEl.textContent = current.mult.toFixed(2) + 'x (Cashed)';
-      document.getElementById('status').textContent = 'cashed out';
-      cashBtn.classList.add('hidden'); startBtn.disabled=false; startBtn.classList.remove('hidden');
-      recordRound('cash');
-    }
+    function doCashout(){ if(!state.running || current.cashed) return; current.cashed=true; clearInterval(engineInterval); state.running=false; engineInterval=null; const payout = +(current.bet * current.mult).toFixed(2); state.balance += payout; multEl.textContent = current.mult.toFixed(2) + 'x (Cashed)'; document.getElementById('status').textContent='cashed out'; cashBtn.classList.add('hidden'); startBtn.disabled=false; startBtn.classList.remove('hidden'); playSound('cash'); recordRound('cash'); maybeSubmitLeaderboard(payout); }
 
-    function recordRound(result){
-      const r = {round: state.round, mult: current.crashAt.toFixed(2), result, hash:current.hash};
-      state.history.push(r);
-      if(state.history.length>200) state.history.shift();
-      localStorage.setItem('avi_history', JSON.stringify(state.history));
-      localStorage.setItem('avi_balance', state.balance);
-      renderState();
-    }
+    function recordRound(result){ const r={round:state.round,mult:current.crashAt.toFixed(2),result,hash:current.hash}; state.history.push(r); if(state.history.length>200) state.history.shift(); localStorage.setItem('avi_history', JSON.stringify(state.history)); localStorage.setItem('avi_balance', state.balance); renderState(); }
 
     /* ===== UI wiring ===== */
-    startBtn.addEventListener('click', startRound);
-    cashBtn.addEventListener('click', doCashout);
+    startBtn.addEventListener('click', startRound); cashBtn.addEventListener('click', doCashout);
     document.getElementById('regenClient').addEventListener('click', ()=>{state.clientSeed = 'client_'+Math.random().toString(36).slice(2,12); localStorage.setItem('avi_client', state.clientSeed); renderState();});
-    document.getElementById('resetBtn').addEventListener('click', ()=>{state.balance=1000;localStorage.setItem('avi_balance',state.balance);renderState();});
-    document.getElementById('demoAnim').addEventListener('click', ()=>{state.trailOn=!state.trailOn});
+    document.getElementById('resetBtn')?.addEventListener('click', ()=>{state.balance=1000;localStorage.setItem('avi_balance',state.balance);renderState();});
+    document.getElementById('demoAnim')?.addEventListener('click', ()=>{state.trailOn=!state.trailOn});
+    document.getElementById('toggleMP')?.addEventListener('click', ()=>{ state.leaderboardEnabled = !state.leaderboardEnabled; mpStatusEl.textContent = state.leaderboardEnabled ? 'On (local simulated)' : 'Off'; });
 
-    document.getElementById('toggleMP').addEventListener('click', ()=>{
-      if(mpStatusEl.textContent==='Off'){
-        mpStatusEl.textContent='On (local simulated)';
-        // placeholder: full firebase setup instructions below
-      } else { mpStatusEl.textContent='Off'; }
-    });
+    /* ===== Improved plane animation (C) ===== */
+    const planeEl = document.getElementById('plane');
+    function animatePlane(mult){ // map multiplier to curve & rotation
+      const px = Math.min(75, 10 + mult*6); // percent from left
+      const py = Math.min(85, 10 + mult*4); // percent from bottom
+      const rot = Math.min(55, mult*2.5);
+      planeEl.style.transform = `translate(${px}%, -${py}%) rotate(${rot}deg) scale(${1 + Math.min(0.8, mult/120)})`;
+    }
 
     /* ===== Trail visuals (A) ===== */
     const trailRoot = document.getElementById('trailRoot');
-    function maybeDropTrail(){ if(!state.trailOn) return; const d=document.createElement('div'); d.className='trail-dot'; d.style.left=(20+Math.random()*30)+'%'; d.style.bottom=(10+current.mult*3)+'%'; d.style.background='radial-gradient(circle, rgba(255,120,120,0.9), rgba(255,40,40,0.15))'; trailRoot.appendChild(d); setTimeout(()=>{d.style.opacity=0; d.style.transform='scale(1.6)';},50); setTimeout(()=>d.remove(),1300); }
+    function maybeDropTrail(){ if(!state.trailOn) return; const d=document.createElement('div'); d.className='trail-dot'; d.style.left=(8 + Math.random()*10)+'%'; d.style.bottom=(8 + current.mult*2.8)+'%'; d.style.background='radial-gradient(circle, rgba(255,200,120,0.95), rgba(255,40,40,0.06))'; trailRoot.appendChild(d); setTimeout(()=>{d.style.opacity='0'; d.style.transform='scale(1.6)';},60); setTimeout(()=>d.remove(),1400); }
 
-    /* ===== initial seed commit ===== */
-    (async()=>{ await precommitServerSeed(); renderState(); })();
+    /* ===== Sounds (B) — generated with WebAudio ===== */
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playTone(freq, time=0.08, type='sine', gain=0.12){ const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type=type; o.frequency.value=freq; g.gain.value=gain; o.connect(g); g.connect(audioCtx.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + time); setTimeout(()=>o.stop(), time*1000 + 20); }
+    function playSound(name){ try{ if(audioCtx.state==='suspended') audioCtx.resume(); if(name==='start'){ playTone(880,0.06,'sine',0.06); playTone(440,0.12,'sine',0.05); } else if(name==='cash'){ playTone(1100,0.06,'square',0.08); playTone(880,0.12,'sine',0.05); } else if(name==='crash'){ playTone(160,0.25,'sawtooth',0.16); playTone(80,0.35,'sine',0.05); } }catch(e){console.warn('audio error',e);} }
 
-    /* ===== Multiplayer (F) — instructions placeholder ===== */
-    /*
-      To enable real multiplayer with shared rounds you can use Firebase Realtime Database (free tier).
-      Steps (short):
-        1. Create Firebase project at https://console.firebase.google.com
-        2. Create a Realtime Database (start in locked mode, but for demo you can allow open reads/writes)
-        3. Copy the firebaseConfig object and paste into the code where indicated (search for FIREBASE_CONFIG)
-        4. Add small client code to push a new round object (server precommit + revealed serverSeed + nonce + hash) and listen for the latest round to sync all clients.
+    /* ===== Leaderboard: local store + optional Firebase (D) ===== */
+    function maybeSubmitLeaderboard(win){ if(!win || win<=0) return; const name = prompt('Enter display name for leaderboard (optional)') || ('anon'); const entry = {name, win}; const lb = JSON.parse(localStorage.getItem('avi_leader')||'[]'); lb.push(entry); lb.sort((a,b)=>b.win - a.win); localStorage.setItem('avi_leader', JSON.stringify(lb.slice(0,50))); renderLeaderboard(); if(state.leaderboardEnabled && state.firebaseApp){ submitToFirebaseLeaderboard(entry); } }
 
-      Important: For your public demo, keep rules simple and do not accept real money. I can provide the exact Firebase snippet if you want to proceed.
-    */
+    /* ===== Firebase hooks (F) - optional ===== */
+    // To enable multiplayer & cloud leaderboard, follow these steps (I provide exact code below):
+    // 1) Create a Firebase project (console.firebase.google.com) and enable Realtime Database
+    // 2) In Database rules (for demo) set read/write to true or configure auth
+    // 3) Copy the web app config and paste into FIREBASE_CONFIG below
+    // 4) Uncomment the firebase scripts and initialize
 
-    /* ===== Accessibility note ===== */
-    // This demo intentionally runs entirely in-browser and stores data locally. It is a play-money educational prototype.
+    const FIREBASE_CONFIG = null; // <-- paste your config object here to enable cloud features
+
+    async function loadFirebaseAndInit(){
+      if(!FIREBASE_CONFIG) return;
+      // dynamically load firebase scripts
+      await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+      await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js');
+      state.firebaseApp = window.firebase.initializeApp(FIREBASE_CONFIG);
+      state.db = firebase.database();
+      state.leaderboardEnabled = true; mpStatusEl.textContent='On (Firebase)';
+      // listen for latest round for multiplayer sync
+      state.db.ref('latestRound').on('value', snap=>{ const val = snap.val(); if(val){ // simple auto-apply: if a new round published, show commit/reveal
+          state.serverCommit = val.commit; serverCommitEl.textContent = state.serverCommit; if(val.revealed){ state.lastHash = val.hash; state.serverSeed = val.serverSeed; state.round = val.nonce; state.lastHash=val.hash; state.history.push({round:val.nonce,mult:val.crashAt,result:val.revealed? 'revealed':'sync',hash:val.hash}); localStorage.setItem('avi_history', JSON.stringify(state.history)); renderState(); }
+        }
+      });
+    }
+
+    function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+
+    async function submitToFirebaseLeaderboard(entry){ if(!state.db) return; const ref = state.db.ref('leaderboard'); await ref.push(entry); }
+
+    async function publishRoundToFirebase(obj){ if(!state.db) return; await state.db.ref('latestRound').set(obj); }
+
+    // If FIREBASE_CONFIG present, auto-init
+    if(FIREBASE_CONFIG){ loadFirebaseAndInit(); }
+
+    /* ===== Initial precommit for demo ===== */
+    (async()=>{ if(!state.serverCommit) await precommitServerSeed(); renderState(); })();
+
+    /* ===== PWA notes ===== */
+    // To make this app installable as PWA on GitHub Pages:
+    // 1) Add a file named "manifest.webmanifest" (example below) to your repo root and link it in <head>.
+    // 2) Add a simple service-worker.js file to cache files (example below) and register it from here.
+    // I include the manifest + sw examples in the repo instructions; service worker must be a separate file in the repo root for GitHub Pages.
+
+    /*************************************************************************
+     * END OF APP
+     *************************************************************************/
   </script>
+
+  <!-- ===================
+       DEPLOYMENT NOTES (paste into your repo)
+       1) index.html  <- this file
+       2) manifest.webmanifest   <- optional manifest (create file)
+       3) service-worker.js     <- optional sw (create file)
+
+       manifest.webmanifest example:
+{
+  "name": "Aviator Clone Demo",
+  "short_name": "AviatorDemo",
+  "start_url": "/aviator-demo/",
+  "display": "standalone",
+  "background_color": "#05031a",
+  "icons": [ { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" } ]
+}
+
+       service-worker.js example (very small cache):
+const CACHE_NAME = 'aviator-demo-v1';
+const FILES_TO_CACHE = ['/', '/index.html'];
+self.addEventListener('install', evt=>{evt.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(FILES_TO_CACHE))); self.skipWaiting();});
+self.addEventListener('fetch', evt=>{evt.respondWith(caches.match(evt.request).then(r=>r||fetch(evt.request)));});
+
+       FIREBASE quick guide (optional):
+       - Create project at console.firebase.google.com
+       - Add a Web app and copy the config object
+       - Create Realtime Database (start with test rules for demo)
+       - Paste config into FIREBASE_CONFIG variable in index.html
+       - Commit & deploy
+
+       Security reminder: Do NOT accept real money without legal advice and proper licensing. This app is for play-money / demo use only.
+  =================== -->
 </body>
 </html>
+
