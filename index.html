@@ -294,7 +294,16 @@
     // 3) Copy the web app config and paste into FIREBASE_CONFIG below
     // 4) Uncomment the firebase scripts and initialize
 
-    const FIREBASE_CONFIG = null; // <-- paste your config object here to enable cloud features
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyB_3M7-FT8ZBvD0OXlFz0TbAvlgDAAZqwo",
+  authDomain: "aviator-demo-d1aee.firebaseapp.com",
+  databaseURL: "https://aviator-demo-d1aee-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "aviator-demo-d1aee",
+  storageBucket: "aviator-demo-d1aee.firebasestorage.app",
+  messagingSenderId: "634557928643",
+  appId: "1:634557928643:web:2b7659860149c4d5753e76",
+  measurementId: "G-4EG1BQF5DW"
+    }; // <-- paste your config object here to enable cloud features
 
     async function loadFirebaseAndInit(){
       if(!FIREBASE_CONFIG) return;
