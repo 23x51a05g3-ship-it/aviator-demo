@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="manifest" href="/aviator-demo/manifest.webmanifest">
+<meta name="theme-color" content="#05031a">
+
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Aviator Clone — Play‑Money (Upgraded)</title>
@@ -374,6 +377,14 @@ self.addEventListener('fetch', evt=>{evt.respondWith(caches.match(evt.request).t
 
        Security reminder: Do NOT accept real money without legal advice and proper licensing. This app is for play-money / demo use only.
   =================== -->
+  <script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/aviator-demo/service-worker.js')
+    .then(()=>console.log('SW registered'))
+    .catch(e=>console.warn('SW reg failed', e));
+}
+</script>
+
 </body>
 </html>
 
